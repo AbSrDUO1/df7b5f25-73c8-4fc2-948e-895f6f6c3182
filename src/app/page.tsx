@@ -8,7 +8,7 @@ import FeatureCardTwo from '@/components/sections/feature/FeatureCardTwo';
 import ProductCardOne from '@/components/sections/product/ProductCardOne';
 import ContactSplit from '@/components/sections/contact/ContactSplit';
 import FooterLogoEmphasis from '@/components/sections/footer/FooterLogoEmphasis';
-import { Star, Fire } from 'lucide-react';
+import { Star } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -23,7 +23,7 @@ export default function Home() {
             { name: "Home", id: "home" },
             { name: "Menu", id: "menu" },
             { name: "About Us", id: "about" },
-            { name: "Contact", id: "contact" },
+            { name: "Contact", id: "contact" }
           ]}
           logoSrc="/assets/logo.png"
           logoAlt="Pizzeria Logo"
@@ -68,7 +68,7 @@ export default function Home() {
               {
                 title: "Pepperoni",
                 description: "Loaded with authentic Italian pepperoni.",
-                icon: Fire
+                icon: Star
               }
             ]}
           />
