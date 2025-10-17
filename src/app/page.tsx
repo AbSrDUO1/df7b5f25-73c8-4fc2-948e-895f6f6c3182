@@ -8,6 +8,7 @@ import FeatureCardTwo from '@/components/sections/feature/FeatureCardTwo';
 import ProductCardOne from '@/components/sections/product/ProductCardOne';
 import ContactSplit from '@/components/sections/contact/ContactSplit';
 import FooterLogoEmphasis from '@/components/sections/footer/FooterLogoEmphasis';
+import { Star, Fire } from 'lucide-react';
 
 export default function Home() {
   return (
@@ -62,12 +63,12 @@ export default function Home() {
               {
                 title: "Margherita",
                 description: "Classic pizza with fresh basil and mozzarella.",
-                icon: "Star"
+                icon: Star
               },
               {
                 title: "Pepperoni",
                 description: "Loaded with authentic Italian pepperoni.",
-                icon: "Fire"
+                icon: Fire
               }
             ]}
           />
