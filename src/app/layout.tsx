@@ -117,6 +117,7 @@ export default function RootLayout({
   const hoverClass = 'webild-hover';
   const selectedClass = 'webild-selected';
   let elementTypeLabel = null;
+  let selectedElementCategoryLabel = null;
   const style = document.createElement('style');
   style.id = 'webild-inspector-styles';
   style.textContent = \`
@@ -142,6 +143,22 @@ export default function RootLayout({
       border-radius: 4px;
       font-size: 12px;
       font-weight: 500;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      pointer-events: none;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    .webild-selected-category-label {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 999998;
+      background: rgba(90, 113, 230, 0.95);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       pointer-events: none;
       white-space: nowrap;
@@ -511,6 +528,21 @@ export default function RootLayout({
       elementTypeLabel = null;
     }
   };
+  const showSelectedCategoryLabel = (elementType) => {
+    removeSelectedCategoryLabel();
+    if (!elementType) return;
+
+    selectedElementCategoryLabel = document.createElement('div');
+    selectedElementCategoryLabel.className = 'webild-selected-category-label';
+    selectedElementCategoryLabel.textContent = elementType;
+    document.body.appendChild(selectedElementCategoryLabel);
+  };
+  const removeSelectedCategoryLabel = () => {
+    if (selectedElementCategoryLabel) {
+      selectedElementCategoryLabel.remove();
+      selectedElementCategoryLabel = null;
+    }
+  };
   const handleMouseOver = (e) => {
     if (!isActive || isSaving) return;
 
@@ -613,6 +645,7 @@ export default function RootLayout({
       }
 
       removeHoverOverlay();
+      removeSelectedCategoryLabel();
 
       selectedElement = null;
       window.parent.postMessage({
@@ -632,9 +665,15 @@ export default function RootLayout({
       hoveredElement = null;
     }
 
+    const elementInfo = getElementInfo(target);
+    const elementType = getElementType(target);
+
+    // Show category label in top-left
+    showSelectedCategoryLabel(elementType);
+
     window.parent.postMessage({
       type: 'webild-element-selected',
-      data: getElementInfo(target)
+      data: elementInfo
     }, '*');
 
     if (isTextElement(target)) {
@@ -701,6 +740,7 @@ export default function RootLayout({
           hoveredElement = null;
         }
         removeHoverOverlay();
+        removeSelectedCategoryLabel();
         window.parent.postMessage({ type: 'webild-editor-deactivated' }, '*');
       }
       return;
@@ -736,7 +776,7 @@ export default function RootLayout({
       if (selectedElement && selectedElement.contentEditable === 'true') {
         makeUneditable(selectedElement, true);
       }
-      console.log('[Visual Editor] Sending changes to parent:', actualChanges.length, actualChanges);
+
       window.parent.postMessage({
         type: 'webild-changes-data',
         data: [...actualChanges]
@@ -752,6 +792,29 @@ export default function RootLayout({
         hoveredElement = null;
       }
       removeHoverOverlay();
+      return;
+    }
+    if (e.data.type === 'webild-update-text') {
+      const { selector, newValue } = e.data.data;
+      const element = document.querySelector(selector);
+      if (element) {
+        element.textContent = newValue;
+      }
+      return;
+    }
+    if (e.data.type === 'webild-update-button') {
+      const { selector, label, link } = e.data.data;
+      const element = document.querySelector(selector);
+      if (element) {
+        if (label !== undefined) {
+          element.textContent = label;
+        }
+        if (link !== undefined && element.tagName === 'BUTTON') {
+          element.setAttribute('onclick', \`window.location.href='\${link}'\`);
+        } else if (link !== undefined && element.tagName === 'A') {
+          element.setAttribute('href', link);
+        }
+      }
       return;
     }
     if (e.data.type === 'webild-apply-changes') {
@@ -784,20 +847,16 @@ export default function RootLayout({
     }
     if (e.data.type === 'webild-replace-image') {
       const { selector, newSrc, isBackground } = e.data.data;
-      console.log('[Visual Editor] Received image replacement:', { selector, newSrc, isBackground });
 
       // Enhanced element finding with better error handling
       let element = document.querySelector(selector);
       let fallbackUsed = false;
 
       if (!element) {
-        console.log('[Visual Editor] Primary selector failed, trying fallbacks...');
-
         // Try simplified selector without nth-of-type
         const simplifiedSelector = selector.replace(/:nth-of-type\(\d+\)/g, '');
         element = document.querySelector(simplifiedSelector);
         if (element) {
-          console.log('[Visual Editor] Found element with simplified selector');
           fallbackUsed = true;
         }
 
@@ -810,7 +869,6 @@ export default function RootLayout({
             if (section) {
               element = section.querySelector('img') || section.querySelector('[style*="background-image"]');
               if (element) {
-                console.log('[Visual Editor] Found element in section:', sectionId);
                 fallbackUsed = true;
               }
             }
@@ -822,13 +880,11 @@ export default function RootLayout({
           const images = document.querySelectorAll('img');
           if (images.length === 1) {
             element = images[0];
-            console.log('[Visual Editor] Using single image element as fallback');
             fallbackUsed = true;
           }
         }
 
         if (!element) {
-          console.error('[Visual Editor] Element not found for selector:', selector);
           window.parent.postMessage({
             type: 'webild-image-replacement-error',
             data: {
@@ -841,11 +897,8 @@ export default function RootLayout({
         }
       }
       if (element) {
-        console.log('[Visual Editor] Found element, replacing image:', element.tagName, fallbackUsed ? '(using fallback)' : '');
-
         // Validate the new image URL
         if (!newSrc || typeof newSrc !== 'string') {
-          console.error('[Visual Editor] Invalid image URL provided:', newSrc);
           window.parent.postMessage({
             type: 'webild-image-replacement-error',
             data: {
@@ -875,7 +928,6 @@ export default function RootLayout({
             }
             oldSrc = originalValues.get(elementSelector) || '';
             element.style.backgroundImage = \`url('\${newSrc}')\`;
-            console.log('[Visual Editor] ✅ Background image replaced:', newSrc);
             const change = {
               selector: elementSelector,
               type: 'backgroundImage',
@@ -885,8 +937,6 @@ export default function RootLayout({
               src: newSrc
             };
             actualChanges.push(change);
-            console.log('[Visual Editor] Added background image change to actualChanges:', change);
-            console.log('[Visual Editor] Total changes now:', actualChanges.length);
           } else if (element.tagName === 'IMG') {
             const elementSelector = getUniqueSelector(element);
             if (!originalValues.has(elementSelector)) {
@@ -904,7 +954,6 @@ export default function RootLayout({
 
             // Set up error handling for image loading
             const handleImageLoad = () => {
-              console.log('[Visual Editor] ✅ Image loaded successfully:', newSrc);
               window.parent.postMessage({
                 type: 'webild-image-replaced',
                 data: { selector, newSrc, oldSrc, success: true }
@@ -912,7 +961,6 @@ export default function RootLayout({
             };
 
             const handleImageError = () => {
-              console.error('[Visual Editor] ❌ Failed to load image:', newSrc);
               // Revert to old image
               if (oldSrc) {
                 element.src = oldSrc;

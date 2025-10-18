@@ -81,7 +81,7 @@ export default function Home() {
             products={[
               {
                 id: "1",
-                name: "Margherita",
+                name: "wefwefewf",
                 price: "$12.99",
                 imageSrc: "asset://feature-pizza"
               },
